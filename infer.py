@@ -89,7 +89,24 @@ def process(opt: Options, path):
         image = image[..., :3] * image[..., 3:4] + (1 - image[..., 3:4])
 
     mv_image = pipe('', image, guidance_scale=5.0, num_inference_steps=30, elevation=0)
+    
+    import pdb
+    # pdb.set_trace()
+    mv_images = []
+    import cv2
+    # pdb.set_trace()
+    # cv2.imwrite('./mv_image_1.png', mv_image[1][:,:,::-1]*255)
+    # exit()
+    # for i in range(1,7,1):
+    #     img = cv2.imread(f'./era_test/30_80_{i}.png')[:,:,::-1]
+    #     img = cv2.resize(img, (256, 256))/255
+    #     mv_images.append(img)
     mv_image = np.stack([mv_image[1], mv_image[2], mv_image[3], mv_image[0]], axis=0) # [4, 256, 256, 3], float32
+    # mv_image = np.stack(mv_images[:4], axis=0) # [4, 256, 256, 3], float32
+    # mv_image = np.stack([mv_images[1], mv_images[5], mv_images[4], mv_images[3]], axis=0) # [4, 256, 256, 3], float32
+    # pdb.set_trace()
+    # cv2.imwrite('./mv_image_0_new.png', mv_image[0][:,:,::-1]*255)
+    # print(mv_image.shape)
 
     # generate gaussians
     input_image = torch.from_numpy(mv_image).permute(0, 3, 1, 2).float().to(device) # [4, 3, 256, 256]
@@ -145,6 +162,7 @@ def process(opt: Options, path):
                 images.append((image.squeeze(1).permute(0,2,3,1).contiguous().float().cpu().numpy() * 255).astype(np.uint8))
 
         images = np.concatenate(images, axis=0)
+        print(images.shape)
         imageio.mimwrite(os.path.join(opt.workspace, name + '.mp4'), images, fps=30)
 
 
