@@ -1,5 +1,5 @@
 *.png
-diff-gaussian-rasterization/
+diff-gaussian-rasterization/*
 workspace_test/*
 */__pycache__/
 pretrained/*

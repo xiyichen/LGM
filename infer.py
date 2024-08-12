@@ -53,6 +53,14 @@ proj_matrix[1, 1] = 1 / tan_half_fov
 proj_matrix[2, 2] = (opt.zfar + opt.znear) / (opt.zfar - opt.znear)
 proj_matrix[3, 2] = - (opt.zfar * opt.znear) / (opt.zfar - opt.znear)
 proj_matrix[2, 3] = 1
+# proj_matrix = torch.zeros(4, 4, dtype=torch.float32, device=device)
+# proj_matrix[0, 0] = 2 / (opt.right - opt.left)
+# proj_matrix[1, 1] = 2 / (opt.top - opt.bottom)
+# proj_matrix[2, 2] = -2 / (opt.zfar - opt.znear)
+# proj_matrix[3, 3] = 1
+# proj_matrix[0, 3] = -(opt.right + opt.left) / (opt.right - opt.left)
+# proj_matrix[1, 3] = -(opt.top + opt.bottom) / (opt.top - opt.bottom)
+# proj_matrix[2, 3] = -(opt.zfar + opt.znear) / (opt.zfar - opt.znear)
 
 # load image dream
 pipe = MVDreamPipeline.from_pretrained(
@@ -101,11 +109,63 @@ def process(opt: Options, path):
     #     img = cv2.imread(f'./era_test/30_80_{i}.png')[:,:,::-1]
     #     img = cv2.resize(img, (256, 256))/255
     #     mv_images.append(img)
-    mv_image = np.stack([mv_image[1], mv_image[2], mv_image[3], mv_image[0]], axis=0) # [4, 256, 256, 3], float32
-    # mv_image = np.stack(mv_images[:4], axis=0) # [4, 256, 256, 3], float32
+    
+    
+    
+    # img = cv2.imread(f'/cluster/scratch/xiychen/Era3D/mv_res/30_80/color_front_masked.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/Era3D/mv_res/30_80/color_right_masked.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/Era3D/mv_res/30_80/color_back_masked.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/Era3D/mv_res/30_80/color_left_masked.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    
+    # img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/front_.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/right_.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/back_.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    # img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/left_.png')[:,:,::-1]
+    # img = cv2.resize(img, (256, 256))/255
+    # mv_images.append(img)
+    
+    img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/front_1200.png')[:,:,::-1]
+    img = cv2.resize(img, (256, 256))/255
+    mv_images.append(img)
+    img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/right_1200.png')[:,:,::-1]
+    img = cv2.resize(img, (256, 256))/255
+    mv_images.append(img)
+    img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/back_1200.png')[:,:,::-1]
+    img = cv2.resize(img, (256, 256))/255
+    mv_images.append(img)
+    img = cv2.imread(f'/cluster/scratch/xiychen/MVHumanNet/visual_smpl/left_1200.png')[:,:,::-1]
+    img = cv2.resize(img, (256, 256))/255
+    mv_images.append(img)
+    
+    
+    
+    
+    
+    
+    
+    
+    # mv_image = np.stack([mv_image[1], mv_image[2], mv_image[3], mv_image[0]], axis=0) # [4, 256, 256, 3], float32
+    # cv2.imwrite('./mv_image_imagedream.png', mv_image.reshape(-1,256,3)[:,:,::-1]*255)
+    # exit()
+    mv_image = np.stack(mv_images[:4], axis=0) # [4, 256, 256, 3], float32
     # mv_image = np.stack([mv_images[1], mv_images[5], mv_images[4], mv_images[3]], axis=0) # [4, 256, 256, 3], float32
     # pdb.set_trace()
-    # cv2.imwrite('./mv_image_0_new.png', mv_image[0][:,:,::-1]*255)
+    # cv2.imwrite('./mv_image_era3d.png', mv_image.reshape(-1,256,3)[:,:,::-1]*255)
+    # exit()
     # print(mv_image.shape)
 
     # generate gaussians
@@ -132,12 +192,12 @@ def process(opt: Options, path):
             azimuth = np.arange(0, 720, 4, dtype=np.int32)
             for azi in tqdm.tqdm(azimuth):
                 
-                cam_poses = torch.from_numpy(orbit_camera(elevation, azi, radius=opt.cam_radius, opengl=True)).unsqueeze(0).to(device)
+                cam_poses = torch.from_numpy(orbit_camera(elevation, azi, radius=opt.cam_radius, opengl=True)).unsqueeze(0).to(device) # c2w
 
                 cam_poses[:, :3, 1:3] *= -1 # invert up & forward direction
                 
                 # cameras needed by gaussian rasterizer
-                cam_view = torch.inverse(cam_poses).transpose(1, 2) # [V, 4, 4]
+                cam_view = torch.inverse(cam_poses).transpose(1, 2) # [V, 4, 4] # w2c
                 cam_view_proj = cam_view @ proj_matrix # [V, 4, 4]
                 cam_pos = - cam_poses[:, :3, 3] # [V, 3]
 

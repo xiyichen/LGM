@@ -28,6 +28,10 @@ class Options:
     znear: float = 0.5
     # camera far plane
     zfar: float = 2.5
+    top: float = 1.0
+    bottom: float = -1.0
+    right: float = 1.0
+    left: float = -1.0
     # number of all views (input + output)
     num_views: int = 12
     # number of views

@@ -7,6 +7,127 @@ import torch.nn.functional as F
 import roma
 from kiui.op import safe_normalize
 
+# def get_rays(pose, h, w, fovy, opengl=True):
+
+#     x, y = torch.meshgrid(
+#         torch.arange(w, device=pose.device),
+#         torch.arange(h, device=pose.device),
+#         indexing="xy",
+#     )
+#     x = x.flatten()
+#     y = y.flatten()
+
+#     cx = w * 0.5
+#     cy = h * 0.5
+
+#     focal = h * 0.5 / np.tan(0.5 * np.deg2rad(fovy))
+
+#     camera_dirs = F.pad(
+#         torch.stack(
+#             [
+#                 (x - cx + 0.5) / focal,
+#                 (y - cy + 0.5) / focal * (-1.0 if opengl else 1.0),
+#             ],
+#             dim=-1,
+#         ),
+#         (0, 1),
+#         value=(-1.0 if opengl else 1.0),
+#     )  # [hw, 3]
+    
+#     camera_dirs[:,0] = 0
+#     camera_dirs[:,1] = 0
+
+#     rays_d = (camera_dirs @ pose[:3, :3].transpose(0, 1)).view(h, w, 3)  # [hw, 3]
+#     # import pdb
+#     # pdb.set_trace()
+#     # rays_o = pose[:3, 3].unsqueeze(0).expand_as(rays_d) # [hw, 3]
+
+#     # rays_o = rays_o.view(h, w, 3)
+#     rays_d = safe_normalize(rays_d).view(h, w, 3)
+    
+#     # pixel_center = 0.5
+#     # i, j = np.meshgrid(
+#     #     np.arange(w, dtype=np.float32) + pixel_center,
+#     #     np.arange(h, dtype=np.float32) + pixel_center,
+#     #     indexing='xy'
+#     # )
+#     # i, j = torch.from_numpy(i), torch.from_numpy(j)
+
+#     # origins = torch.stack([(i/w-0.5)*2, (j/h-0.5)*2, torch.zeros_like(i)], dim=-1) # W, H, 3
+#     # rays_o = torch.matmul(pose[None, None, :3, :3], origins[:, :, :, None]).squeeze()  # (H, W, 3)
+#     # rays_o = pose[None, None,:3,3].expand(rays_d.shape) + rays_o 
+#     origins_x = (x - cx + 0.5) * (2.0 / w)  # normalize to range [-1, 1]
+#     origins_y = (y - cy + 0.5) * (2.0 / h) * (-1.0 if opengl else 1.0)  # normalize to range [-1, 1]
+#     origins_z = torch.zeros_like(origins_x)  # z = 0 for the image plane
+    
+#     rays_o = torch.stack([origins_x, origins_y, origins_z], dim=-1) @ pose[:3, :3].transpose(0, 1) + pose[:3, 3]
+
+#     rays_o = rays_o.view(h, w, 3)
+
+#     return rays_o, rays_d
+def get_rays_focal(pose, h, w, focal, cx, cy, opengl=True):
+
+    x, y = torch.meshgrid(
+        torch.arange(w, device=pose.device),
+        torch.arange(h, device=pose.device),
+        indexing="xy",
+    )
+    x = x.flatten()
+    y = y.flatten()
+
+    camera_dirs = F.pad(
+        torch.stack(
+            [
+                (x - cx + 0.5) / focal,
+                (y - cy + 0.5) / focal * (-1.0 if opengl else 1.0),
+            ],
+            dim=-1,
+        ),
+        (0, 1),
+        value=(-1.0 if opengl else 1.0),
+    )  # [hw, 3]
+
+    rays_d = camera_dirs @ pose[:3, :3].transpose(0, 1)  # [hw, 3]
+    rays_o = pose[:3, 3].unsqueeze(0).expand_as(rays_d) # [hw, 3]
+
+    rays_o = rays_o.view(h, w, 3)
+    rays_d = safe_normalize(rays_d).view(h, w, 3)
+
+    return rays_o, rays_d
+
+def get_rays_K(pose, h, w, K, opengl=True):
+    focal = K[0][0]
+    cx = K[0][2]
+    cy = K[1][2]
+
+    x, y = torch.meshgrid(
+        torch.arange(w, device=pose.device),
+        torch.arange(h, device=pose.device),
+        indexing="xy",
+    )
+    x = x.flatten()
+    y = y.flatten()
+
+    camera_dirs = F.pad(
+        torch.stack(
+            [
+                (x - cx + 0.5) / focal,
+                (y - cy + 0.5) / focal * (-1.0 if opengl else 1.0),
+            ],
+            dim=-1,
+        ),
+        (0, 1),
+        value=(-1.0 if opengl else 1.0),
+    )  # [hw, 3]
+
+    rays_d = camera_dirs @ pose[:3, :3].transpose(0, 1)  # [hw, 3]
+    rays_o = pose[:3, 3].unsqueeze(0).expand_as(rays_d) # [hw, 3]
+
+    rays_o = rays_o.view(h, w, 3)
+    rays_d = safe_normalize(rays_d).view(h, w, 3)
+
+    return rays_o, rays_d
+
 def get_rays(pose, h, w, fovy, opengl=True):
 
     x, y = torch.meshgrid(
